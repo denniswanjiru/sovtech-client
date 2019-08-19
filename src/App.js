@@ -1,26 +1,47 @@
 import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { ApolloProvider } from 'react-apollo';
+import {
+  Switch, Route, BrowserRouter as Router
+} from "react-router-dom";
+import { ApolloClient, ApolloLink, InMemoryCache, HttpLink} from 'apollo-boost';
 
-function App() {
+import Joke from './components/Joke';
+import Signup from './components/Signup';
+import Signin from './components/Signin';
+import PrivateRoute from './HOC/withAuth';
+import Categories from './components/Categories';
+
+const httpLink = new HttpLink({ uri: 'https://sovtech-graphql-server.herokuapp.com/graphql' });
+
+const authLink = new ApolloLink((operation, forward) => {
+  const token = JSON.parse(localStorage.getItem('token'));
+
+  operation.setContext({
+    headers: {
+      Authorization: token ? `Bearer ${token}` : ''
+    }
+  });
+
+  return forward(operation);
+});
+
+
+const client = new ApolloClient({
+  link: authLink.concat(httpLink),
+  cache: new InMemoryCache()
+});
+
+export default function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    <ApolloProvider client={client}>
+      <Router>
+        <Switch>
+          <Route exact path="/" component={Signin} />
+          <Route exact path="/signup" component={Signup} />
+          <PrivateRoute exact path="/categories" component={Categories} />
+          <PrivateRoute exact path="/jokes/:category" component={Joke} />
+        </Switch>
+      </Router>
+    </ApolloProvider>
+  )
 }
-
-export default App;
